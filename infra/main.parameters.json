@@ -33,13 +33,13 @@
         "value": "${OPENAI_CHAT_HOST=azure}"
       },
       "chatModelName": {
-        "value": "${AZURE_OPENAI_CHAT_MODEL=GPT-4-2024-08-06}"
+        "value": "${AZURE_OPENAI_CHAT_MODEL=gpt-5}"
       },
       "chatDeploymentName": {
-        "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4}"
+        "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-5}"
       },
       "chatDeploymentVersion":{
-        "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT_VERSION=2026-03-05}"
+        "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT_VERSION=(2025-08-07)}"
       },
       "chatDeploymentSku": {
         "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT_SKU=GlobalStandard}"
@@ -51,13 +51,13 @@
         "value": "${DEPLOY_EVAL_MODEL=false}"
       },
       "evalModelName": {
-        "value": "${AZURE_OPENAI_EVAL_MODEL=gpt-4}"
+        "value": "${AZURE_OPENAI_EVAL_MODEL=gpt-5}"
       },
       "evalDeploymentName": {
-        "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT=gpt-4}"
+        "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT=gpt-5}"
       },
       "evalDeploymentVersion":{
-        "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT_VERSION=turbo-2024-04-09}"
+        "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT_VERSION=2025-08-07}"
       },
       "evalDeploymentSku": {
         "value": "${AZURE_OPENAI_EVAL_DEPLOYMENT_SKU=GlobalStandard}"
