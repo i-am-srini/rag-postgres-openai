@@ -7,66 +7,6 @@ param name string
 
 @minLength(1)
 @description('Primary location for all resources')
-// microsoft.insights/components has restricted regions
-@allowed([
-  'eastus'
-  'southcentralus'
-  'northeurope'
-  'westeurope'
-  'southeastasia'
-  'westus2'
-  'uksouth'
-  'canadacentral'
-  'centralindia'
-  'japaneast'
-  'australiaeast'
-  'koreacentral'
-  'francecentral'
-  'centralus'
-  'eastus2'
-  'eastasia'
-  'westus'
-  'southafricanorth'
-  'northcentralus'
-  'brazilsouth'
-  'switzerlandnorth'
-  'norwayeast'
-  'norwaywest'
-  'australiasoutheast'
-  'australiacentral2'
-  'germanywestcentral'
-  'switzerlandwest'
-  'uaecentral'
-  'ukwest'
-  'japanwest'
-  'brazilsoutheast'
-  'uaenorth'
-  'australiacentral'
-  'southindia'
-  'westus3'
-  'koreasouth'
-  'swedencentral'
-  'canadaeast'
-  'jioindiacentral'
-  'jioindiawest'
-  'qatarcentral'
-  'southafricawest'
-  'germanynorth'
-  'polandcentral'
-  'israelcentral'
-  'italynorth'
-  'mexicocentral'
-  'spaincentral'
-  'newzealandnorth'
-  'chilecentral'
-  'indonesiacentral'
-  'malaysiawest'
-])
-@metadata({
-  azd: {
-    type: 'location'
-  }
-})
 param location string
 
 @description('Whether the deployment is running on GitHub Actions')
@@ -131,6 +71,7 @@ param openAIEmbedHost string = 'azure'
 @secure()
 param openAIComKey string = ''
 
+param azureOpenAIAPIVersion string = '2024-03-01-preview'
 @secure()
 param azureOpenAIKey string = ''
 
@@ -206,20 +147,18 @@ param useAiProject bool = false
 
 param webAppExists bool = false
 
-var principalType = empty(runningOnGh) ? 'User' : 'ServicePrincipal'
-
 var resourceToken = toLower(uniqueString(subscription().id, name, location))
 var prefix = '${toLower(name)}-${resourceToken}'
 var tags = { 'azd-env-name': name }
 
-resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: '${name}-rg'
-  location: location
-  tags: tags
+// ✅ Use existing ResourceGroup1 instead of creating a new one
+resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' existing = {
+  name: 'ResourceGroup1'
 }
-
 var postgresServerName = '${prefix}-postgresql'
 var postgresDatabaseName = 'postgres'
+var postgresEntraAdministratorObjectId = principalId
+var postgresEntraAdministratorType = empty(runningOnGh) ? 'User' : 'ServicePrincipal'
 var postgresEntraAdministratorName = 'admin${uniqueString(resourceGroup.id, principalId)}'
 
 module postgresServer 'core/database/postgresql/flexibleserver.bicep' = {
@@ -239,8 +178,8 @@ module postgresServer 'core/database/postgresql/flexibleserver.bicep' = {
     version: '15'
     authType: 'EntraOnly'
     entraAdministratorName: postgresEntraAdministratorName
-    entraAdministratorObjectId: principalId
-    entraAdministratorType: principalType
+    entraAdministratorObjectId: postgresEntraAdministratorObjectId
+    entraAdministratorType: postgresEntraAdministratorType
     allowAzureIPsFirewall: true
     allowAllIPsFirewall: true // Necessary for post-provision script, can be disabled after
   }
@@ -383,6 +322,10 @@ var webAppEnv = union(azureOpenAIKeyEnv, openAIComKeyEnv, [
   {
     name: 'AZURE_OPENAI_ENDPOINT'
     value: !empty(azureOpenAIEndpoint) ? azureOpenAIEndpoint : (deployAzureOpenAI ? openAI.outputs.endpoint : '')
+  }
+  {
+    name: 'AZURE_OPENAI_VERSION'
+    value: openAIChatHost == 'azure' ? azureOpenAIAPIVersion : ''
   }
 ])
 
@@ -537,7 +480,7 @@ module ai 'core/ai/ai-foundry.bicep' = if (useAiProject) {
     projectName: 'aiproject-${resourceToken}'
     storageAccountName: storage.outputs.name
     principalId: principalId
-    principalType: principalType
+    principalType: empty(runningOnGh) ? 'User' : 'ServicePrincipal'
   }
 }
 
@@ -548,7 +491,7 @@ module openAIRoleUser 'core/security/role.bicep' = {
   params: {
     principalId: principalId
     roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
-    principalType: principalType
+    principalType: empty(runningOnGh) ? 'User' : 'ServicePrincipal'
   }
 }
 
@@ -558,7 +501,7 @@ module azureAiUserRole 'core/security/role.bicep' = if (useAiProject && resource
   params: {
     principalId: principalId
     roleDefinitionId: '53ca6127-db72-4b80-b1b0-d745d6d5456d' // Azure AI User
-    principalType: principalType
+    principalType: empty(runningOnGh) ? 'User' : 'ServicePrincipal'
   }
 }
 
@@ -581,7 +524,7 @@ module appInsightsReaderRole 'core/security/role.bicep' = {
   params: {
     principalId: principalId
     roleDefinitionId: '43d0d8ad-25c7-4714-9337-8ba259a9fe05' // Application Insights Component Reader
-    principalType: principalType
+    principalType: 'User'
   }
 }
 
@@ -608,6 +551,7 @@ output AZURE_OPENAI_RESOURCE_GROUP string = deployAzureOpenAI ? openAIResourceGr
 output AZURE_OPENAI_ENDPOINT string = !empty(azureOpenAIEndpoint)
   ? azureOpenAIEndpoint
   : (deployAzureOpenAI ? openAI.outputs.endpoint : '')
+output AZURE_OPENAI_VERSION string = azureOpenAIAPIVersion
 output AZURE_OPENAI_CHAT_DEPLOYMENT string = deployAzureOpenAI ? chatDeploymentName : ''
 output AZURE_OPENAI_CHAT_DEPLOYMENT_VERSION string = deployAzureOpenAI ? chatDeploymentVersion : ''
 output AZURE_OPENAI_CHAT_DEPLOYMENT_CAPACITY int = deployAzureOpenAI ? chatDeploymentCapacity : 0
