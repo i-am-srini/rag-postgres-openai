@@ -33,7 +33,7 @@
         "value": "${OPENAI_CHAT_HOST=azure}"
       },
       "chatModelName": {
-        "value": "${AZURE_OPENAI_CHAT_MODEL=gpt-4}"
+        "value": "${AZURE_OPENAI_CHAT_MODEL=GPT-4-2024-08-06}"
       },
       "chatDeploymentName": {
         "value": "${AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4}"
